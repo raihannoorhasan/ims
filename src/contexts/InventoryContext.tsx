@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { 
   Product, Customer, Supplier, Sale, Purchase, Course, Invoice, ServiceTicket, Technician, ServiceInvoice,
-  CourseBatch, Student, Enrollment, CoursePayment, PaymentVoucher
+  CourseBatch, Student, Enrollment, CoursePayment, PaymentVoucher, AttendanceRecord, AttendanceSession
 } from '../types';
 
 interface InventoryContextType {
@@ -665,7 +665,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     addCoursePayment,
     updateCoursePayment,
     deleteCoursePayment,
-    generatePaymentVoucher
+    generatePaymentVoucher,
     addAttendanceSession,
     updateAttendanceRecord
   };
