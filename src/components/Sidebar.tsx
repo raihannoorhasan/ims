@@ -34,7 +34,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   return (
     <div className="w-64 bg-slate-900 text-white h-screen p-4">
       <div className="mb-8">
-        <h1 className="text-xl font-bold text-blue-400">TechFlow IMS</h1>
+        <h1 className="text-xl font-bold text-blue-400">Hi Tech Computer</h1>
         <p className="text-slate-400 text-sm">Inventory Management</p>
       </div>
       
