@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { 
   Product, Customer, Supplier, Sale, Purchase, Course, Invoice, ServiceTicket, Technician, ServiceInvoice,
-  CourseBatch, Student, Enrollment, CoursePayment, PaymentVoucher, AttendanceRecord, AttendanceSession
+  CourseBatch, Student, Admission, Enrollment, CoursePayment, PaymentVoucher, AttendanceRecord, AttendanceSession
 } from '../types';
 
 interface InventoryContextType {
@@ -18,6 +18,7 @@ interface InventoryContextType {
   serviceInvoices: ServiceInvoice[];
   courseBatches: CourseBatch[];
   students: Student[];
+  admissions: Admission[];
   enrollments: Enrollment[];
   coursePayments: CoursePayment[];
   paymentVouchers: PaymentVoucher[];
@@ -45,6 +46,8 @@ interface InventoryContextType {
   addStudent: (student: Omit<Student, 'id' | 'createdAt'>) => void;
   updateStudent: (id: string, student: Partial<Student>) => void;
   deleteStudent: (id: string) => void;
+  addAdmission: (admission: Omit<Admission, 'id' | 'admissionDate' | 'createdAt'>) => void;
+  updateAdmission: (id: string, admission: Partial<Admission>) => void;
   addEnrollment: (enrollment: Omit<Enrollment, 'id' | 'enrollmentDate' | 'createdAt'>) => void;
   updateEnrollment: (id: string, enrollment: Partial<Enrollment>) => void;
   deleteEnrollment: (id: string) => void;
@@ -71,6 +74,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [serviceInvoices, setServiceInvoices] = useLocalStorage<ServiceInvoice[]>('serviceInvoices', []);
   const [courseBatches, setCourseBatches] = useLocalStorage<CourseBatch[]>('courseBatches', []);
   const [students, setStudents] = useLocalStorage<Student[]>('students', []);
+  const [admissions, setAdmissions] = useLocalStorage<Admission[]>('admissions', []);
   const [enrollments, setEnrollments] = useLocalStorage<Enrollment[]>('enrollments', []);
   const [coursePayments, setCoursePayments] = useLocalStorage<CoursePayment[]>('coursePayments', []);
   const [paymentVouchers, setPaymentVouchers] = useLocalStorage<PaymentVoucher[]>('paymentVouchers', []);
@@ -146,6 +150,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           name: 'Computer Hardware Fundamentals',
           duration: 40,
           price: 299,
+          admissionFee: 50,
+          registrationFee: 25,
+          examFee: 30,
           description: 'Learn the basics of computer hardware components and assembly',
           materials: ['Workbooks', 'Practice Hardware', 'Online Resources'],
           instructor: 'John Smith',
@@ -158,6 +165,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           name: 'Advanced Laptop Repair',
           duration: 60,
           price: 499,
+          admissionFee: 75,
+          registrationFee: 35,
+          examFee: 50,
           description: 'Advanced techniques for laptop troubleshooting and repair',
           materials: ['Repair Tools', 'Test Equipment', 'Schematics'],
           instructor: 'Sarah Johnson',
@@ -466,11 +476,29 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     setStudents(students.filter(student => student.id !== id));
   };
 
+  const addAdmission = (admissionData: Omit<Admission, 'id' | 'admissionDate' | 'createdAt'>) => {
+    const newAdmission: Admission = {
+      ...admissionData,
+      id: Date.now().toString(),
+      admissionDate: new Date(),
+      createdAt: new Date()
+    };
+    setAdmissions([...admissions, newAdmission]);
+  };
+
+  const updateAdmission = (id: string, admissionData: Partial<Admission>) => {
+    setAdmissions(admissions.map(admission => 
+      admission.id === id ? { ...admission, ...admissionData } : admission
+    ));
+  };
+
   const addEnrollment = (enrollmentData: Omit<Enrollment, 'id' | 'enrollmentDate' | 'createdAt'>) => {
     const newEnrollment: Enrollment = {
       ...enrollmentData,
       id: Date.now().toString(),
       enrollmentDate: new Date(),
+      registrationFeePaid: false,
+      examFeePaid: false,
       createdAt: new Date()
     };
     setEnrollments([...enrollments, newEnrollment]);
@@ -510,16 +538,39 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     };
     setCoursePayments([...coursePayments, newPayment]);
 
-    // Update enrollment payment status
-    setEnrollments(enrollments.map(enrollment =>
-      enrollment.id === paymentData.enrollmentId
-        ? {
-            ...enrollment,
-            paidAmount: enrollment.paidAmount + paymentData.amount,
-            remainingAmount: enrollment.remainingAmount - paymentData.amount
-          }
-        : enrollment
-    ));
+    // Update payment status based on payment type
+    if (paymentData.paymentType === 'admission' && paymentData.admissionId) {
+      setAdmissions(admissions.map(admission =>
+        admission.id === paymentData.admissionId
+          ? { ...admission, paidAmount: admission.paidAmount + paymentData.amount }
+          : admission
+      ));
+    } else if (paymentData.paymentType === 'enrollment' || paymentData.paymentType === 'installment') {
+      setEnrollments(enrollments.map(enrollment =>
+        enrollment.id === paymentData.enrollmentId
+          ? {
+              ...enrollment,
+              paidAmount: enrollment.paidAmount + paymentData.amount,
+              remainingAmount: enrollment.remainingAmount - paymentData.amount,
+              installmentPlan: enrollment.installmentPlan && paymentData.paymentType === 'installment' 
+                ? { ...enrollment.installmentPlan, paidInstallments: enrollment.installmentPlan.paidInstallments + 1 }
+                : enrollment.installmentPlan
+            }
+          : enrollment
+      ));
+    } else if (paymentData.paymentType === 'registration') {
+      setEnrollments(enrollments.map(enrollment =>
+        enrollment.id === paymentData.enrollmentId
+          ? { ...enrollment, registrationFeePaid: true }
+          : enrollment
+      ));
+    } else if (paymentData.paymentType === 'exam') {
+      setEnrollments(enrollments.map(enrollment =>
+        enrollment.id === paymentData.enrollmentId
+          ? { ...enrollment, examFeePaid: true }
+          : enrollment
+      ));
+    }
   };
 
   const updateCoursePayment = (id: string, paymentData: Partial<CoursePayment>) => {
@@ -549,11 +600,16 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     const payment = coursePayments.find(p => p.voucherNumber === voucherNumber);
     if (!payment) return;
 
-    const enrollment = enrollments.find(e => e.id === payment.enrollmentId);
+    const enrollment = payment.enrollmentId ? enrollments.find(e => e.id === payment.enrollmentId) : null;
+    const admission = payment.admissionId ? admissions.find(a => a.id === payment.admissionId) : null;
     const student = students.find(s => s.id === payment.studentId);
-    const course = courses.find(c => c.id === enrollment?.courseId);
-    const batch = courseBatches.find(b => b.id === enrollment?.batchId);
+    const course = courses.find(c => c.id === (enrollment?.courseId || admission?.courseId));
+    const batch = courseBatches.find(b => b.id === (enrollment?.batchId || admission?.batchId));
 
+    let installmentInfo = '';
+    if (payment.paymentType === 'installment' && payment.installmentNumber) {
+      installmentInfo = `Installment ${payment.installmentNumber}`;
+    }
     const newVoucher: PaymentVoucher = {
       id: Date.now().toString(),
       voucherNumber: payment.voucherNumber,
@@ -561,10 +617,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       studentName: student?.name || 'Unknown',
       courseName: course?.name || 'Unknown',
       batchName: batch?.batchName || 'Unknown',
+      paymentType: payment.paymentType,
       amount: payment.amount,
       paymentMethod: payment.paymentMethod,
       paymentDate: payment.paymentDate,
       receivedBy: payment.receivedBy,
+      installmentInfo,
       createdAt: new Date()
     };
     setPaymentVouchers([...paymentVouchers, newVoucher]);
@@ -632,6 +690,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     serviceInvoices,
     courseBatches,
     students,
+    admissions,
     enrollments,
     coursePayments,
     paymentVouchers,
@@ -659,6 +718,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     addStudent,
     updateStudent,
     deleteStudent,
+    addAdmission,
+    updateAdmission,
     addEnrollment,
     updateEnrollment,
     deleteEnrollment,

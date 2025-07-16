@@ -76,6 +76,9 @@ export interface Course {
   name: string;
   duration: number; // in hours
   price: number;
+  admissionFee: number;
+  registrationFee: number;
+  examFee: number;
   description: string;
   materials: string[];
   instructor: string;
@@ -108,29 +111,52 @@ export interface Student {
   createdAt: Date;
 }
 
+export interface Admission {
+  id: string;
+  studentId: string;
+  courseId: string;
+  batchId: string;
+  admissionDate: Date;
+  admissionFee: number;
+  paidAmount: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
+}
+
 export interface Enrollment {
   id: string;
   studentId: string;
   courseId: string;
   batchId: string;
+  admissionId: string;
   enrollmentDate: Date;
   totalFee: number;
   paidAmount: number;
   remainingAmount: number;
+  installmentPlan?: {
+    totalInstallments: number;
+    installmentAmount: number;
+    paidInstallments: number;
+  };
+  registrationFeePaid: boolean;
+  examFeePaid: boolean;
   status: 'active' | 'completed' | 'dropped' | 'suspended';
   createdAt: Date;
 }
 
 export interface CoursePayment {
   id: string;
+  admissionId?: string;
   enrollmentId: string;
   studentId: string;
+  paymentType: 'admission' | 'enrollment' | 'installment' | 'registration' | 'exam';
   amount: number;
   paymentMethod: 'cash' | 'card' | 'transfer' | 'cheque';
   paymentDate: Date;
   voucherNumber: string;
   description?: string;
   receivedBy: string;
+  installmentNumber?: number;
   createdAt: Date;
 }
 
@@ -141,10 +167,12 @@ export interface PaymentVoucher {
   studentName: string;
   courseName: string;
   batchName: string;
+  paymentType: string;
   amount: number;
   paymentMethod: string;
   paymentDate: Date;
   receivedBy: string;
+  installmentInfo?: string;
   createdAt: Date;
 }
 
